@@ -191,6 +191,37 @@ class Example(QMainWindow):
 class MessierDialog(QMainWindow):
     def __init__(self, parent=None):
         super(MessierDialog, self).__init__(parent)
+
+        reverse_color = QAction('&Цвет', self)
+        reverse_color.setShortcut('Ctrl+R')
+        reverse_color.setStatusTip('Изменить стиль картинки')
+        reverse_color.triggered.connect(self.reverse_im)
+
+        size = QAction('&Размер', self)
+        size.setShortcut('Ctrl+K')
+        size.setStatusTip('Изменить размер картинки')
+        size.triggered.connect(self.ch_size)
+
+        strictness = QAction('&Точность', self)
+        strictness.setShortcut('Ctrl+S')
+        strictness.setStatusTip('Изменить точность проведения линии')
+        strictness.triggered.connect(self.change_strictness)
+
+        FPS = QAction('&FPS', self)
+        FPS.setShortcut('Ctrl+F')
+        FPS.setStatusTip('Изменить частоту обновления картинки')
+        FPS.triggered.connect(self.change_fps)
+
+        self.statusBar()
+        menubar = self.menuBar()
+        fileMenu1 = menubar.addMenu('&Общие')
+        fileMenu1.addAction(FPS)
+        fileMenu2 = menubar.addMenu('&Изображение')
+        fileMenu2.addAction(reverse_color)
+        fileMenu2.addAction(size)
+        fileMenu3 = menubar.addMenu('&Выделение и проверка')
+        fileMenu3.addAction(strictness)
+
         self.setWindowTitle(UT)
         self.im_pos = 400, 50
         self.win_x, self.win_y = root.winfo_screenwidth(), root.winfo_screenheight()
@@ -205,11 +236,13 @@ class MessierDialog(QMainWindow):
         del im
         self.time = False
         self.user_data = []
-        self.reverseded = False
+        self.reversed = False
         self.deleted = []
         self.curr_pos = None
         self.k = 1
         self.fps = 25
+        self.to_edit = False
+        self.change_name = False
 
         self.wait = QLabel("", self)
         self.wait.resize(200, 30)
@@ -237,34 +270,107 @@ class MessierDialog(QMainWindow):
         self.timer.resize(300, 50)
         self.timer.move(20, int(self.win_y * screen_increase) - 125 * screen_increase)
         self.stric = 20
+        self.i = 0
         self.loader()
         self.show()
+
+    def change_strictness(self):
+        i, okBtnPressed = QInputDialog.getInt(self, "Точность",
+                                              "Введите точность",
+                                              5, 1, 50, 1)
+        if okBtnPressed:
+            self.stric = i
+
+    def change_fps(self):
+        i, okBtnPressed = QInputDialog.getInt(self, "FPS",
+                                              "Введите fps",
+                                              25, 1, 50, 1)
+        if okBtnPressed:
+            self.fps = i
+
+    def reverse_im(self):
+        if not self.reversed:
+            im = Image.open('Skycharts\\constellations\\' + UT + '\\photo.png')
+            pixels = im.load()
+            x, y = im.size
+            for i in range(x):
+                for j in range(y):
+                    c = 256 - sum(pixels[i, j]) // 3
+                    pixels[i, j] = tuple([c for i in range(3)])
+            rod = 0
+            im.save('Skycharts\\build\\photo.png')
+            self.pixmap = QPixmap('Skycharts\\build\\photo.png')
+            remove(abspath(curdir) + '\\Skycharts\\build\\photo.png')
+            self.reversed = not self.reversed
+            self.update()
+        else:
+            self.pixmap = QPixmap('Skycharts\\constellations\\' + UT + '\\photo.png')
+            self.reversed = not self.reversed
+            self.update()
+
+    def ch_size(self):
+        i, okBtnPressed = QInputDialog.getInt(self, "Размер",
+                                              "Введите размер в процентах от стандартного",
+                                              100, 10, 200, 5)
+        if okBtnPressed:
+            k = i / 100
+            self.im_size = tuple(map(lambda x: x * k / self.k, self.im_size))
+            for j in range(len(self.true_data)):
+                x, y = self.true_data[j][1][0], self.true_data[j][1][1]
+                x = (x - self.im_pos[0]) * k / self.k + self.im_pos[0]
+                y = (y - self.im_pos[1]) * k / self.k + self.im_pos[1]
+                self.true_data[j] = [self.true_data[j][0], (x, y)]
+            for j in range(len(self.user_data)):
+                x, y = self.user_data[j][1][0], self.user_data[j][1][1]
+                x = (x - self.im_pos[0]) * k / self.k + self.im_pos[0]
+                y = (y - self.im_pos[1]) * k / self.k + self.im_pos[1]
+                self.user_data[j] = [self.user_data[j][0], (x, y), self.user_data[j][2]]
+            self.update()
+            self.k = k
 
     def mousePressEvent(self, e):
         point = e.pos().x(), e.pos().y()
         if self.rasm:
-            if self.im_pos[0] <= point[0] <= self.im_size[0] + self.im_pos[0]\
-                    and self.im_pos[1] <= point[1] <= self.im_size[1] + self.im_pos[1]:
-                if point_type == 'messier' or point_type == 'caldwell':
-                    i, okBtnPressed = QInputDialog.getInt(self, "Номер",
-                                                          "Введите номер объекта в процентах от стандартного",
-                                                          100, 10, 200, 5)
-                    if okBtnPressed:
-                        self.user_data.append([i, point, QPen(Qt.yellow, 2)])
-                elif point_type == 'stars_bayer':
-                    i, okBtnPressed = QInputDialog.getItem(self, "Буква",
-                                                     "Выберите букву\n",
-                                                     tuple(alph),
-                                                     len(self.type_data), False)
-                    if okBtnPressed:
-                        i = alph.find(i) + 1
-                        self.user_data.append([i, point, QPen(Qt.yellow, 2)])
-                self.update()
+            if self.to_edit:
+                if self.im_pos[0] <= point[0] <= self.im_size[0] + self.im_pos[0] \
+                        and self.im_pos[1] <= point[1] <= self.im_size[1] + self.im_pos[1]:
+                    f = lambda x, y: ((x[0] - y[0]) ** 2 + (x[1] - y[1]) ** 2) ** 0.5
+                    found = 1
+                    min = 1000
+                    self.user_data[self.i][2] = QPen(Qt.yellow, 2)
+                    for j in range(len(self.user_data)):
+                        if f(self.user_data[j][1], point) < min:
+                            found = self.user_data[j][0]
+                            min = f(self.user_data[j][1], point)
+                            self.i = j
+                    self.user_data[self.i][2] = QPen(Qt.white, 2)
+                    self.messier_pixmap = QPixmap('Skycharts\\messier\\m ' + str(found) + '.jpg')
+                    self.change_name = True
+            else:
+                if self.im_pos[0] <= point[0] <= self.im_size[0] + self.im_pos[0] \
+                        and self.im_pos[1] <= point[1] <= self.im_size[1] + self.im_pos[1]:
+                    if point_type == 'messier' or point_type == 'caldwell':
+                        i, okBtnPressed = QInputDialog.getInt(self, "Номер",
+                                                              "Введите номер объекта",
+                                                              1, 1, 110, 1)
+                        if okBtnPressed:
+                            self.user_data.append([i, point, QPen(Qt.yellow, 2)])
+                    elif point_type == 'stars_bayer':
+                        i, okBtnPressed = QInputDialog.getItem(self, "Буква",
+                                                               "Выберите букву\n",
+                                                               tuple(alph),
+                                                               len(self.type_data), False)
+                        if okBtnPressed:
+                            i = alph.find(i) + 1
+                            self.user_data.append([i, point, QPen(Qt.yellow, 2)])
+                    self.update()
 
     def paintEvent(self, e):
         sleep(1 / self.fps)
         painter = QPainter(self)
         painter.drawPixmap(QRect(*self.im_pos, *self.im_size), self.pixmap)
+        if self.change_name:
+            painter.drawPixmap(QRect(*(50, 500), *(200, 200)), self.messier_pixmap)
         if self.rasm:
             st = time() - self.bal
             h = str(int((st // 3600) % 24)).rjust(2, '0')
@@ -313,6 +419,7 @@ class MessierDialog(QMainWindow):
             if i == '!':
                 break
             name, x, y = map(float, i.split())
+            name = int(name)
             k = self.im_size[0] / self.real_size[0]
             self.true_data.append([name, (x * k + self.im_pos[0], y * k + self.im_pos[1])])
         f1.close()
@@ -322,6 +429,19 @@ class MessierDialog(QMainWindow):
             self.to_show = True
         else:
             self.to_show = False
+
+    def keyPressEvent(self, e):
+        if (e.key() == Qt.Key_Z) and (e.modifiers() == Qt.ControlModifier):
+            if len(self.user_data) != 0:
+                self.user_data.pop(-1)
+                self.update()
+        if (e.key() == Qt.Key_E) and (e.modifiers() == Qt.ControlModifier):
+            if self.to_edit:
+                self.to_edit = False
+            else:
+                self.to_edit = True
+        if (e.key() == Qt.Key_E) and self.to_edit:
+            pass
 
 
 class ConstellationDialog(QMainWindow):
@@ -378,7 +498,7 @@ class ConstellationDialog(QMainWindow):
         self.paint = False
         self.time = False
         self.lines = []
-        self.reverseded = False
+        self.reversed = False
         self.deleted = []
         self.curr_pos = None
         self.k = 1
@@ -421,7 +541,7 @@ class ConstellationDialog(QMainWindow):
                                               100, 10, 200, 5)
         if okBtnPressed:
             k = i / 100
-            self.im_size = tuple(map(lambda x: int(x * k), self.im_size_um))
+            self.im_size = tuple(map(lambda x: x * k, self.im_size_um))
             for j in range(len(self.true_lines)):
                 x1, y1, x2, y2 = *self.true_lines[j][0], *self.true_lines[j][1]
                 x1 -= self.im_pos[0]
@@ -456,7 +576,7 @@ class ConstellationDialog(QMainWindow):
             self.fps = i
 
     def reverse_im(self):
-        if not self.reverseded:
+        if not self.reversed:
             im = Image.open('Skycharts\\constellations\\' + UT + '\\photo.png')
             pixels = im.load()
             x, y = im.size
@@ -468,11 +588,11 @@ class ConstellationDialog(QMainWindow):
             im.save('Skycharts\\build\\photo.png')
             self.pixmap = QPixmap('Skycharts\\build\\photo.png')
             remove(abspath(curdir) + '\\Skycharts\\build\\photo.png')
-            self.reverseded = not self.reverseded
+            self.reversed = not self.reversed
             self.update()
         else:
             self.pixmap = QPixmap('Skycharts\\constellations\\' + UT + '\\photo.png')
-            self.reverseded = not self.reverseded
+            self.reversed = not self.reversed
             self.update()
 
     def mouseReleaseEvent(self, e):

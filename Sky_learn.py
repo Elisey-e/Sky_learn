@@ -1,6 +1,6 @@
 from sys import argv, exit
 from os import listdir, curdir, walk, remove, mkdir, rename
-from os.path import abspath, exists
+from os.path import abspath, exists, dirname
 from PyQt5.QtWidgets import QWidget, QApplication, QLabel, QPushButton, QLineEdit, QInputDialog,\
     QMessageBox, QFileDialog, QKeySequenceEdit, QAction, qApp, QMainWindow, QDialog, QScrollArea,\
     QGridLayout, QComboBox
@@ -134,7 +134,7 @@ class Example(QMainWindow):
 
     def dia(self, type):
         global qq, searcher_global
-        q = sorted(listdir(path=abspath(curdir) + '\\Skycharts\\constellations'))
+        q = sorted(listdir(path=dirname(abspath(__file__)) + '/Skycharts/constellations'))
         qq = q
         s = searcher(self)
         s.exec_()
@@ -177,7 +177,7 @@ class Example(QMainWindow):
 
     def ans(self):
         global opened, s
-        f = open("Skycharts\\Cons_bayer.txt")
+        f = open(dirname(abspath(__file__)) + "/Skycharts/Cons_bayer.txt", "r", encoding="cp1251")
         q = f.readlines()
         f.close()
         q = list(map(lambda x: [x[:x.rfind(' ')], x[-4:-1]], q))
@@ -226,10 +226,10 @@ class MessierDialog(QMainWindow):
         self.im_pos = 400, 50
         self.win_x, self.win_y = root.winfo_screenwidth(), root.winfo_screenheight()
         self.setGeometry(0, 0, int(self.win_x * screen_increase) - 10, int(self.win_y * screen_increase) - 75 * screen_increase)
-        self.dir = abspath(curdir)
+        self.dir = dirname(abspath(__file__))
         self.rasm = False
-        self.pixmap = QPixmap('Skycharts\\constellations\\' + UT + '\\photo.png')
-        im = Image.open('Skycharts\\constellations\\' + UT + '\\photo.png')
+        self.pixmap = QPixmap(dirname(abspath(__file__)) + '/Skycharts/constellations/' + UT + '/photo.png')
+        im = Image.open(dirname(abspath(__file__)) + '/Skycharts/constellations/' + UT + '/photo.png')
         self.real_size = im.size
         ma = max(self.real_size)
         self.im_size = tuple(map(lambda x: int(x / ma * self.win_x * screen_increase / 2), self.real_size))
@@ -290,7 +290,7 @@ class MessierDialog(QMainWindow):
 
     def reverse_im(self):
         if not self.reversed:
-            im = Image.open('Skycharts\\constellations\\' + UT + '\\photo.png')
+            im = Image.open(dirname(abspath(__file__)) + '/Skycharts/constellations/' + UT + '/photo.png')
             pixels = im.load()
             x, y = im.size
             for i in range(x):
@@ -298,13 +298,13 @@ class MessierDialog(QMainWindow):
                     c = 256 - sum(pixels[i, j]) // 3
                     pixels[i, j] = tuple([c for i in range(3)])
             rod = 0
-            im.save('Skycharts\\build\\photo.png')
-            self.pixmap = QPixmap('Skycharts\\build\\photo.png')
-            remove(abspath(curdir) + '\\Skycharts\\build\\photo.png')
+            im.save(dirname(abspath(__file__)) + '/Skycharts/build/photo.png')
+            self.pixmap = QPixmap(dirname(abspath(__file__)) + '/Skycharts/build/photo.png')
+            remove(dirname(abspath(__file__)) + '/Skycharts/build/photo.png')
             self.reversed = not self.reversed
             self.update()
         else:
-            self.pixmap = QPixmap('Skycharts\\constellations\\' + UT + '\\photo.png')
+            self.pixmap = QPixmap(dirname(abspath(__file__)) + '/Skycharts/constellations/' + UT + '/photo.png')
             self.reversed = not self.reversed
             self.update()
 
@@ -344,7 +344,7 @@ class MessierDialog(QMainWindow):
                             min = f(self.user_data[j][1], point)
                             self.i = j
                     self.user_data[self.i][2] = QPen(Qt.white, 2)
-                    self.messier_pixmap = QPixmap('Skycharts\\messier\\m ' + str(found) + '.jpg')
+                    self.messier_pixmap = QPixmap(dirname(abspath(__file__)) + '/Skycharts/messier/m ' + str(found) + '.jpg')
                     self.change_name = True
             else:
                 if self.im_pos[0] <= point[0] <= self.im_size[0] + self.im_pos[0] \
@@ -411,7 +411,7 @@ class MessierDialog(QMainWindow):
             QMessageBox.information(None, "Результат", "Верно", defaultButton=QMessageBox.Close)
 
     def loader(self):
-        path = 'Skycharts\\constellations\\' + UT + '\\' + point_type + '_data.txt'
+        path = dirname(abspath(__file__)) + '/Skycharts/constellations/' + UT + '/' + point_type + '_data.txt'
         f1 = open(path, 'r')
         sp = f1.read().split('\n')
         self.true_data = []
@@ -486,10 +486,10 @@ class ConstellationDialog(QMainWindow):
         self.im_pos = 300, 50
         self.win_x, self.win_y = root.winfo_screenwidth(), root.winfo_screenheight()
         self.setGeometry(0, 0, int(self.win_x*screen_increase) - 10, int(self.win_y*screen_increase) - 75 * screen_increase)
-        self.dir = abspath(curdir)
+        self.dir = dirname(abspath(__file__))
         self.rasm = False
-        self.pixmap = QPixmap('Skycharts\\constellations\\' + UT + '\\photo.png')
-        im = Image.open('Skycharts\\constellations\\' + UT + '\\photo.png')
+        self.pixmap = QPixmap(dirname(abspath(__file__)) + '/Skycharts/constellations/' + UT + '/photo.png')
+        im = Image.open(dirname(abspath(__file__)) + '/Skycharts/constellations/' + UT + '/photo.png')
         self.real_size = im.size
         ma = max(self.real_size)
         self.im_size = tuple(map(lambda x: int(x / ma * self.win_x * screen_increase / 2), self.real_size))
@@ -577,7 +577,7 @@ class ConstellationDialog(QMainWindow):
 
     def reverse_im(self):
         if not self.reversed:
-            im = Image.open('Skycharts\\constellations\\' + UT + '\\photo.png')
+            im = Image.open(dirname(abspath(__file__)) + '/Skycharts/constellations/' + UT + '/photo.png')
             pixels = im.load()
             x, y = im.size
             for i in range(x):
@@ -585,13 +585,13 @@ class ConstellationDialog(QMainWindow):
                     c = 256 - sum(pixels[i, j]) // 3
                     pixels[i, j] = tuple([c for i in range(3)])
             rod = 0
-            im.save('Skycharts\\build\\photo.png')
-            self.pixmap = QPixmap('Skycharts\\build\\photo.png')
-            remove(abspath(curdir) + '\\Skycharts\\build\\photo.png')
+            im.save(dirname(abspath(__file__)) + '/Skycharts/build/photo.png')
+            self.pixmap = QPixmap(dirname(abspath(__file__)) + '/Skycharts/build/photo.png')
+            remove(dirname(abspath(__file__)) + '/Skycharts/build/photo.png')
             self.reversed = not self.reversed
             self.update()
         else:
-            self.pixmap = QPixmap('Skycharts\\constellations\\' + UT + '\\photo.png')
+            self.pixmap = QPixmap(dirname(abspath(__file__)) + '/Skycharts/constellations/' + UT + '/photo.png')
             self.reversed = not self.reversed
             self.update()
 
@@ -703,7 +703,7 @@ class ConstellationDialog(QMainWindow):
             QMessageBox.information(None, "Результат", "Верно", defaultButton=QMessageBox.Close)
 
     def loader(self):
-        path = 'Skycharts\\constellations\\' + UT + '\\star_data.txt'
+        path = dirname(abspath(__file__)) + '/Skycharts/constellations/' + UT + '/star_data.txt'
         f1 = open(path, 'r')
         sp = f1.read().split('\n')
         self.true_lines = []
@@ -1273,11 +1273,9 @@ class PointsEditor(QMainWindow):
                 self.mode = 'stars_bayer'
 
     def create_folder(self):
-        dir = abspath(curdir)
+        dir = dirname(abspath(__file__))
         i, ok = QInputDialog.getText(self, '', 'Введите название скайчарта')
         if ok:
-            if '\\' in dir:
-                dir = dir.replace('\\', '/')
             dir += '/Skycharts/constellations/' + i
             try: mkdir(dir)
             except: QMessageBox.information(None, "Внимание", "Вы выбрали сохранение\n"
@@ -1294,15 +1292,17 @@ class PointsEditor(QMainWindow):
             self.btn_cr.setEnabled(False)
 
     def choose_photo(self):
-        if exists('C:\\Users\\Asus\\Pictures\\Stellarium'):
-            fname, ok = QFileDialog.getOpenFileName(self, 'Выбрать картинку',
-                                                    'C:\\Users\\Asus\\Pictures\\Stellarium', "Картинка(*.png)")
-        else:
-            fname, ok = QFileDialog.getOpenFileName(self, 'Выбрать картинку',
-                                                    'C:\\Users\\Asus\\Pictures\\Stellarium', "Картинка(*.png)")
-        if ok:
-            self.photo_path = fname
-            self.load_image()
+        # if exists('C:/Users/Asus/Pictures/Stellarium'):
+        #     fname, ok = QFileDialog.getOpenFileName(self, 'Выбрать картинку',
+        #                                             'C:/Users/Asus/Pictures/Stellarium', "Картинка(*.png)")
+        # else:
+        #     fname, ok = QFileDialog.getOpenFileName(self, 'Выбрать картинку',
+        #                                             'C:/Users/Asus/Pictures/Stellarium', "Картинка(*.png)")
+        # if ok:
+        #     self.photo_path = fname
+        #     self.load_image()
+        # Непонятно, что подразумевалось
+        pass
 
     def load_image(self):
         self.pixmap = QPixmap(self.photo_path)
@@ -1502,15 +1502,17 @@ class ConstellationEditor(QMainWindow):
                 self.update()
 
     def dial(self):
-        if exists('C:\\Users\\Asus\\Pictures\\Stellarium'):
-            fname, ok = QFileDialog.getOpenFileName(self, 'Выбрать картинку',
-                                                'C:\\Users\\Asus\\Pictures\\Stellarium', "Картинка(*.png)")
-        else:
-            fname, ok = QFileDialog.getOpenFileName(self, 'Выбрать картинку',
-                                                    'C:\\Users\\Asus\\Pictures\\Stellarium', "Картинка(*.png)")
-        if ok:
-            self.photo_path = fname
-            self.load_image()
+        # if exists('C:/Users/Asus/Pictures/Stellarium'):
+        #     fname, ok = QFileDialog.getOpenFileName(self, 'Выбрать картинку',
+        #                                         'C:/Users/Asus/Pictures/Stellarium', "Картинка(*.png)")
+        # else:
+        #     fname, ok = QFileDialog.getOpenFileName(self, 'Выбрать картинку',
+        #                                             'C:/Users/Asus/Pictures/Stellarium', "Картинка(*.png)")
+        # if ok:
+        #     self.photo_path = fname
+        #     self.load_image()
+        # Не понятно, что подразумевалось
+        pass
 
     def ch(self):
         if self.draw == False:
@@ -1527,11 +1529,9 @@ class ConstellationEditor(QMainWindow):
         self.pic = True
 
     def create_folder(self):
-        dir = abspath(curdir)
+        dir = dirname(abspath(__file__))
         i, ok = QInputDialog.getText(self, '', 'Введите название скайчарта')
         if ok:
-            if '\\' in dir:
-                dir = dir.replace('\\', '/')
             dir += '/Skycharts/constellations/' + i
             mkdir(dir)
             self.dir = dir
@@ -1611,11 +1611,11 @@ class Guess_Cons(QMainWindow):
         self.setWindowTitle("Назови Созвездие")
         self.setWindowIcon(QIcon('title.jpg'))
 
-        q = sorted(listdir(path=abspath(curdir) + '\\Skycharts\\constellations'))
+        q = sorted(listdir(path=dirname(abspath(__file__)) + '/Skycharts/constellations'))
         from random import choice
         self.uuu = choice(q)
         uuu = self.uuu
-        self.pix = QPixmap('Skycharts\\constellations\\'+ self.uuu + '\\photo.png')
+        self.pix = QPixmap(dirname(abspath(__file__)) + '/Skycharts/constellations/'+ self.uuu + '/photo.png')
         self.lbl_pix = QLabel(self)
         self.lbl_pix.move(100, 100)
         self.lbl_pix.setPixmap(self.pix)

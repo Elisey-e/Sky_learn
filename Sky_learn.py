@@ -1,17 +1,16 @@
 from sys import argv, exit
-from os import listdir, curdir, walk, remove, mkdir, rename
-from os.path import abspath, exists, dirname
-from PyQt5.QtWidgets import QWidget, QApplication, QLabel, QPushButton, QLineEdit, QInputDialog,\
-    QMessageBox, QFileDialog, QKeySequenceEdit, QAction, qApp, QMainWindow, QDialog, QScrollArea,\
+from os import listdir, remove, mkdir, rename
+from os.path import abspath, dirname
+from PyQt5.QtWidgets import QApplication, QLabel, QPushButton, QLineEdit, QInputDialog,\
+    QMessageBox, QAction, qApp, QMainWindow, QDialog,\
     QGridLayout, QComboBox
-from PyQt5.QtGui import QPainter, QPen, QBrush, QLinearGradient, QImage, QPalette, QPixmap, QIcon, QFont, QColor
-from PyQt5.QtCore import QObject, pyqtSignal, QSize, Qt, QUrl, QRect
-from time import localtime, timezone, sleep
-import webbrowser
+from PyQt5.QtGui import QPainter, QPen, QBrush, QLinearGradient, QPixmap, QIcon, QFont, QColor
+from PyQt5.QtCore import Qt, QRect
+from time import sleep
 from shutil import copy
 from time import time
 from PIL import Image
-from math import acos, degrees, radians, sin
+from math import acos, sin
 
 import tkinter as tk
 

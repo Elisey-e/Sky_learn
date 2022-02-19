@@ -1,0 +1,3 @@
+core.setDate("2000-01-01T00:00:00", "UTC");
+StelMovementMgr.zoomTo(31 ,1);
+core.moveToRaDec ("8h00m00s", "48d35m00s",1);

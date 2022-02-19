@@ -1,17 +1,25 @@
 from sys import argv, exit
 from os import listdir, curdir, walk, remove, mkdir, rename
-from os.path import abspath, exists
+from os.path import abspath, exists, dirname
 from PyQt5.QtWidgets import QWidget, QApplication, QLabel, QPushButton, QLineEdit, QInputDialog,\
-    QMessageBox, QFileDialog, QKeySequenceEdit, QAction, qApp, QMainWindow, QDialog, QScrollArea,\
+    QMessageBox, QFileDialog, QKeySequenceEdit, QAction, qApp, QMainWindow, QDialog, QScrollArea
+from os import listdir, remove, mkdir, rename
+from os.path import abspath, dirname
+from PyQt5.QtWidgets import QApplication, QLabel, QPushButton, QLineEdit, QInputDialog,\
+    QMessageBox, QAction, qApp, QMainWindow, QDialog,\
     QGridLayout, QComboBox
 from PyQt5.QtGui import QPainter, QPen, QBrush, QLinearGradient, QImage, QPalette, QPixmap, QIcon, QFont, QColor
 from PyQt5.QtCore import QObject, pyqtSignal, QSize, Qt, QUrl, QRect
 from time import localtime, timezone, sleep
 import webbrowser
+from PyQt5.QtGui import QPainter, QPen, QBrush, QLinearGradient, QPixmap, QIcon, QFont, QColor
+from PyQt5.QtCore import Qt, QRect
+from time import sleep
 from shutil import copy
 from time import time
 from PIL import Image
 from math import acos, degrees, radians, sin
+from math import acos, sin
 
 import tkinter as tk
 
@@ -38,12 +46,18 @@ point_type = ''
 class Example(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.initUI()
-
-    def initUI(self):
-        self.setGeometry(300, 100, 810, 400)
+        self.setMouseTracking(True)
+        self.pixmap = QPixmap("Skycharts\\ground.png")
+        im = Image.open("Skycharts\\ground.png")
+        self.x, self.y = im.size
+        self.setGeometry(200, 100, *(self.x, self.y))
         self.setWindowTitle('Sky Learn')
         self.setWindowIcon(QIcon('title.jpg'))
+        self.abs_h = 0
+        self.k = 0
+        self.on = False
+        self.draw_buttons = False
+        self.abs_h_2 = 0
 
         exitAction = QAction(QIcon('exit.png'), '&Закрыть', self)
         exitAction.setShortcut('Ctrl+Q')
@@ -61,29 +75,51 @@ class Example(QMainWindow):
         fileMenu1.addAction(exitAction)
         fileMenu1.addAction(sys_size)
 
-        self.btn = QPushButton('Ботать\nсозвездия!', self)
-        self.btn.setFont(QFont('SansSerif', 13))
-        self.btn.resize(190, 100)
-        self.btn.move(10, 50)
-        self.btn.clicked.connect(self.open_constellations)
+        self.button_cons_lines = QPushButton("Линии созвездий", self)
+        self.button_cons_lines.setFont(QFont('SansSerif', 20))
+        self.button_cons_lines.resize(400, 50)
+        self.button_cons_lines.move(450, self.y + 10)
 
-        self.btn2 = QPushButton('Ботать\nМессье!', self)
-        self.btn2.setFont(QFont('SansSerif', 13))
-        self.btn2.resize(190, 100)
-        self.btn2.move(210, 50)
-        self.btn2.clicked.connect(self.open_messier)
+        self.button_cons_names = QPushButton("Названия созвездий", self)
+        self.button_cons_names.setFont(QFont('SansSerif', 20))
+        self.button_cons_names.resize(400, 50)
+        self.button_cons_names.move(450, self.y + 10)
 
-        self.btnn = QPushButton('Добавить\nСкайчарт!', self)
-        self.btnn.setFont(QFont('SansSerif', 13))
-        self.btnn.resize(190, 100)
-        self.btnn.move(410, 50)
-        self.btnn.clicked.connect(self.add)
+        self.button_stars_names = QPushButton("Названия звезд", self)
+        self.button_stars_names.setFont(QFont('SansSerif', 20))
+        self.button_stars_names.resize(400, 50)
+        self.button_stars_names.move(450, self.y + 10)
 
-        self.btnr = QPushButton('Назови\nСозвездие!', self)
-        self.btnr.setFont(QFont('SansSerif', 13))
-        self.btnr.resize(190, 100)
-        self.btnr.move(610, 50)
-        self.btnr.clicked.connect(self.ans)
+        self.button_dss_messier = QPushButton("Объекты Мессье", self)
+        self.button_dss_messier.setFont(QFont('SansSerif', 20))
+        self.button_dss_messier.resize(400, 50)
+        self.button_dss_messier.move(450, self.y + 10)
+
+        self.button_dss_caldwell = QPushButton("Объекты Колдуэлла", self)
+        self.button_dss_caldwell.setFont(QFont('SansSerif', 20))
+        self.button_dss_caldwell.resize(400, 50)
+        self.button_dss_caldwell.move(450, self.y + 10)
+
+        self.button_solar_bodies = QPushButton("Объекты СС", self)
+        self.button_solar_bodies.setFont(QFont('SansSerif', 20))
+        self.button_solar_bodies.resize(400, 50)
+        self.button_solar_bodies.move(450, self.y + 10)
+
+        self.button_meteor_showers = QPushButton("Метеорные потоки", self)
+        self.button_meteor_showers.setFont(QFont('SansSerif', 20))
+        self.button_meteor_showers.resize(400, 50)
+        self.button_meteor_showers.move(450, self.y + 10)
+
+        self.button_sphere_notes = QPushButton("Обозначения небесной сферы", self)
+        self.button_sphere_notes.setFont(QFont('SansSerif', 20))
+        self.button_sphere_notes.resize(400, 50)
+        self.button_sphere_notes.move(450, self.y + 10)
+
+        self.button_dss_messier.clicked.connect(self.open_messier)
+        self.button_cons_lines.clicked.connect(self.open_constellations)
+        self.button_cons_names.clicked.connect(self.ans)
+
+
         self.show()
 
     def paintEvent(self, e):
@@ -92,27 +128,77 @@ class Example(QMainWindow):
         self.drawLines(qp)
         qp.end()
 
+    def wheelEvent(self, e):
+        a = str(e.angleDelta())
+        b = a[a.find('(') + 1: a.find(')')]
+        q = b.split(', ')
+        if abs(int(q[1])) > 150:
+            q[1] = '0'
+        if self.abs_h_2 < 0:
+            self.draw_buttons = False
+            self.abs_h -= 1
+        if not self.draw_buttons:
+            self.abs_h += -int(q[1])
+        if self.abs_h > 1000:
+            self.abs_h = 1000
+            self.draw_buttons = True
+        if self.abs_h < 0:
+            self.abs_h = 0
+        k_old = self.k
+        self.k = (self.abs_h // 100) * 100
+        if k_old != self.k:
+            self.pixmap = QPixmap("Skycharts\\grounds\\ground" + str(self.k // 5) + ".jpg")
+            self.update()
+        if self.draw_buttons:
+            self.abs_h_2 -= int(q[1])
+            if self.abs_h_2 > 1000:
+                self.abs_h_2 = 1000
+            self.do_buttons()
+
+    def do_buttons(self):
+        self.cons_lines_pixmap = QPixmap("Skycharts\\main_sections\\constallations.png")
+        self.cons_names_pixmap = QPixmap("Skycharts\\main_sections\\cons_names.png")
+        self.stars_names_pixmap = QPixmap("Skycharts\\main_sections\\stars_names.png")
+        self.messier_pixmap = QPixmap("Skycharts\\main_sections\\messier.png")
+        self.caldwell_pixmap = QPixmap("Skycharts\\main_sections\\caldwell.png")
+        *ok, self.cons_x, self.cons_y = self.cons_lines_pixmap.rect().getCoords()
+        self.button_cons_lines.move(70, self.y + 50 - self.abs_h_2)
+        self.button_cons_names.move(570, self.y + 50 - self.abs_h_2)
+        self.button_stars_names.move(1070, self.y + 50 - self.abs_h_2)
+        self.button_dss_messier.move(310, self.y + 450 - self.abs_h_2)
+        self.button_dss_caldwell.move(830, self.y + 450 - self.abs_h_2)
+        self.update()
+
     def drawLines(self, qp):
-        # Рисуем фон
-        g = QLinearGradient(0, 0, 0, 400)
-        g.setColorAt(0, Qt.blue)
-        g.setColorAt(1, Qt.yellow)
-        y = 400 - 1 * 400 / 4095.0
-        qp.fillRect(0, 0, 810, 400, g)
-        qp.setPen(Qt.black)
-        qp.drawLine(0, y, 810, y)
-        #
-        brush = QBrush(QColor(200, 200, 150))
-        brush.setStyle(Qt.Dense4Pattern)
-        qp.setBrush(brush)
-        qp.drawRect(-1, -1, 811, 401)
-        #
+        qp.drawPixmap(QRect(*(0, 0), *(self.x, self.y)), self.pixmap)
+        if self.draw_buttons:
+            qp.drawPixmap(QRect(*(70, self.y + 100 - self.abs_h_2), *(400, int(self.cons_y * 400 / self.cons_x))), self.cons_lines_pixmap)
+            qp.drawPixmap(QRect(*(570, self.y + 100 - self.abs_h_2), *(400, int(self.cons_y * 400 / self.cons_x))), self.cons_names_pixmap)
+            qp.drawPixmap(QRect(*(1070, self.y + 100 - self.abs_h_2), *(400, int(self.cons_y * 400 / self.cons_x))), self.stars_names_pixmap)
+            qp.drawPixmap(QRect(*(310, self.y + 500 - self.abs_h_2), *(400, int(self.cons_y * 400 / self.cons_x))), self.messier_pixmap)
+            qp.drawPixmap(QRect(*(830, self.y + 500 - self.abs_h_2), *(400, int(self.cons_y * 400 / self.cons_x))), self.caldwell_pixmap)
+
+    def prosess_ground(self):
+        im = Image.open("Skycharts\\ground.png")
+        im_di = Image.open("Skycharts\\ground_misted.jpg")
+        pix_1 = im.load()
+        pix_2 = im_di.load()
+        for j in range(self.y - 1):
+            for i in range(self.x - 1):
+                pix_1[i, j] = (int(pix_1[i, j][0] * self.k / 200) + int(pix_2[i, j][0] * (-self.k + 200) / 200),
+                         int(pix_1[i, j][1] * self.k / 200) + int(pix_2[i, j][1] * (-self.k + 200) / 200),
+                         int(pix_1[i, j][2] * self.k / 200) + int(pix_2[i, j][2] * (-self.k + 200) / 200))
+        im.save("Skycharts\\build\\ground.png")
+        self.pixmap = QPixmap("Skycharts\\build\\ground.png")
+        remove(abspath(curdir) + '\\Skycharts\\build\\ground.png')
+        print(self.k)
+        self.update()
 
     def change_size(self):
         global screen_increase
         i, okBtnPressed = QInputDialog.getInt(self, "Масштаб",
                                               "Введите масштаб, %",
-                                              100, 100, 175, 25)
+                                              150, 100, 175, 25)
         if okBtnPressed:
             screen_increase = i / 100
 
@@ -123,13 +209,9 @@ class Example(QMainWindow):
             dialog = Information_Dialog(self)
 
     def open_messier(self):
-        self.btn2.clicked.disconnect()
-        self.btn2.clicked.connect(self.open_messier)
         self.dia('messier')
 
     def open_constellations(self):
-        self.btn.clicked.disconnect()
-        self.btn.clicked.connect(self.open_constellations)
         self.dia('constellations')
 
     def dia(self, type):
@@ -226,7 +308,7 @@ class MessierDialog(QMainWindow):
         self.im_pos = 400, 50
         self.win_x, self.win_y = root.winfo_screenwidth(), root.winfo_screenheight()
         self.setGeometry(0, 0, int(self.win_x * screen_increase) - 10, int(self.win_y * screen_increase) - 75 * screen_increase)
-        self.dir = abspath(curdir)
+        self.dir = dirname(abspath(__file__))
         self.rasm = False
         self.pixmap = QPixmap('Skycharts\\constellations\\' + UT + '\\photo.png')
         im = Image.open('Skycharts\\constellations\\' + UT + '\\photo.png')
@@ -298,9 +380,9 @@ class MessierDialog(QMainWindow):
                     c = 256 - sum(pixels[i, j]) // 3
                     pixels[i, j] = tuple([c for i in range(3)])
             rod = 0
-            im.save('Skycharts\\build\\photo.png')
-            self.pixmap = QPixmap('Skycharts\\build\\photo.png')
-            remove(abspath(curdir) + '\\Skycharts\\build\\photo.png')
+            im.save(dirname(abspath(__file__)) + '/Skycharts/build/photo.png')
+            self.pixmap = QPixmap(dirname(abspath(__file__)) + '/Skycharts/build/photo.png')
+            remove(dirname(abspath(__file__)) + '/Skycharts/build/photo.png')
             self.reversed = not self.reversed
             self.update()
         else:
@@ -486,7 +568,7 @@ class ConstellationDialog(QMainWindow):
         self.im_pos = 300, 50
         self.win_x, self.win_y = root.winfo_screenwidth(), root.winfo_screenheight()
         self.setGeometry(0, 0, int(self.win_x*screen_increase) - 10, int(self.win_y*screen_increase) - 75 * screen_increase)
-        self.dir = abspath(curdir)
+        self.dir = dirname(abspath(__file__))
         self.rasm = False
         self.pixmap = QPixmap('Skycharts\\constellations\\' + UT + '\\photo.png')
         im = Image.open('Skycharts\\constellations\\' + UT + '\\photo.png')
@@ -577,7 +659,7 @@ class ConstellationDialog(QMainWindow):
 
     def reverse_im(self):
         if not self.reversed:
-            im = Image.open('Skycharts\\constellations\\' + UT + '\\photo.png')
+            im = Image.open(dirname(abspath(__file__)) + '/Skycharts/constellations/' + UT + '/photo.png')
             pixels = im.load()
             x, y = im.size
             for i in range(x):
@@ -591,7 +673,7 @@ class ConstellationDialog(QMainWindow):
             self.reversed = not self.reversed
             self.update()
         else:
-            self.pixmap = QPixmap('Skycharts\\constellations\\' + UT + '\\photo.png')
+            self.pixmap = QPixmap(dirname(abspath(__file__)) + '/Skycharts/constellations/' + UT + '/photo.png')
             self.reversed = not self.reversed
             self.update()
 
@@ -703,7 +785,7 @@ class ConstellationDialog(QMainWindow):
             QMessageBox.information(None, "Результат", "Верно", defaultButton=QMessageBox.Close)
 
     def loader(self):
-        path = 'Skycharts\\constellations\\' + UT + '\\star_data.txt'
+        path = dirname(abspath(__file__)) + '/Skycharts/constellations/' + UT + '/star_data.txt'
         f1 = open(path, 'r')
         sp = f1.read().split('\n')
         self.true_lines = []
@@ -1228,6 +1310,20 @@ class PointsEditor(QMainWindow):
 
         self.show()
 
+    def keyPressEvent(self, e):
+        if e.key() == Qt.Key_S:
+            self.point = tuple([self.point[0], self.point[1] + 1])
+            self.update()
+        if e.key() == Qt.Key_W:
+            self.point = tuple([self.point[0], self.point[1] - 1])
+            self.update()
+        if e.key() == Qt.Key_A:
+            self.point = tuple([self.point[0] - 1, self.point[1]])
+            self.update()
+        if e.key() == Qt.Key_D:
+            self.point = tuple([self.point[0] + 1, self.point[1]])
+            self.update()
+
     def paintEvent(self, e):
         painter = QPainter(self)
         if self.pic:
@@ -1273,11 +1369,9 @@ class PointsEditor(QMainWindow):
                 self.mode = 'stars_bayer'
 
     def create_folder(self):
-        dir = abspath(curdir)
+        dir = dirname(abspath(__file__))
         i, ok = QInputDialog.getText(self, '', 'Введите название скайчарта')
         if ok:
-            if '\\' in dir:
-                dir = dir.replace('\\', '/')
             dir += '/Skycharts/constellations/' + i
             try: mkdir(dir)
             except: QMessageBox.information(None, "Внимание", "Вы выбрали сохранение\n"
@@ -1527,11 +1621,9 @@ class ConstellationEditor(QMainWindow):
         self.pic = True
 
     def create_folder(self):
-        dir = abspath(curdir)
+        dir = dirname(abspath(__file__))
         i, ok = QInputDialog.getText(self, '', 'Введите название скайчарта')
         if ok:
-            if '\\' in dir:
-                dir = dir.replace('\\', '/')
             dir += '/Skycharts/constellations/' + i
             mkdir(dir)
             self.dir = dir
@@ -1539,6 +1631,8 @@ class ConstellationEditor(QMainWindow):
             rename(dir + self.photo_path[self.photo_path.rfind('/'):], dir + '/photo.png')
             f1 = open(dir + '/star_data.txt', 'w')
             f1.close()
+            f2 = open(dir + '/coords.txt', 'w')
+            f2.close()
             self.btn_cr.setEnabled(False)
 
     def red(self):
@@ -1611,11 +1705,11 @@ class Guess_Cons(QMainWindow):
         self.setWindowTitle("Назови Созвездие")
         self.setWindowIcon(QIcon('title.jpg'))
 
-        q = sorted(listdir(path=abspath(curdir) + '\\Skycharts\\constellations'))
+        q = sorted(listdir(path=dirname(abspath(__file__)) + '/Skycharts/constellations'))
         from random import choice
         self.uuu = choice(q)
         uuu = self.uuu
-        self.pix = QPixmap('Skycharts\\constellations\\'+ self.uuu + '\\photo.png')
+        self.pix = QPixmap(dirname(abspath(__file__)) + '/Skycharts/constellations/'+ self.uuu + '/photo.png')
         self.lbl_pix = QLabel(self)
         self.lbl_pix.move(100, 100)
         self.lbl_pix.setPixmap(self.pix)

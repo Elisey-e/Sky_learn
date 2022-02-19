@@ -27,6 +27,7 @@ root = tk.Tk()
 from ctypes import *
 
 
+amogus = 1
 new = ''
 UT = ''
 alph = 'αβγδεζηθικλμνξοπρστυφχψω'

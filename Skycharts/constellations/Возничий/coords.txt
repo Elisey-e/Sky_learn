@@ -1,3 +1,0 @@
-core.setDate("2000-01-01T00:00:00", "UTC");
-StelMovementMgr.zoomTo(28.2, 1);
-core.moveToRaDec("5h37m00s", "42d15m00s",1);

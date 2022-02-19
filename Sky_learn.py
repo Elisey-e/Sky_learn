@@ -607,15 +607,27 @@ class ConstellationDialog(QMainWindow):
         self.ans.move(10, 170)
         self.ans.clicked.connect(self.show_ans)
 
+        self.step = QPushButton("Показать ошибки", self)
+        self.step.resize(200, 50)
+        self.step.move(10, 230)
+        self.step.clicked.connect(self.show_bugs)
+        self.step.setEnabled(False)
+
         self.timer = QLabel("00:00:00.00", self)
         self.timer.setFont(QFont('SansSerif', 20))
         self.timer.resize(300, 50)
         self.timer.move(20, int(self.win_y * screen_increase) - 125 * screen_increase)
         self.ros = False
         self.rost = False
+        self.show_bugs_bool = False
         self.stric = 5
+        self.checked_lines = False
         self.loader()
         self.show()
+
+    def show_bugs(self):
+        self.show_bugs_bool = not self.show_bugs_bool
+        self.update()
 
     def ch_size(self):
         i, okBtnPressed = QInputDialog.getInt(self, "Размер",
@@ -720,6 +732,8 @@ class ConstellationDialog(QMainWindow):
                 self.update()
 
     def mousePressEvent(self, e):
+        self.step.setEnabled(False)
+        self.show_bugs_bool = False
         point = e.pos().x(), e.pos().y()
         self.point = point
         if self.rasm:
@@ -746,17 +760,28 @@ class ConstellationDialog(QMainWindow):
             self.timer.setText(h + ':' + m + ':' + s[:s.find('.') + 3].rjust(5, '0'))
             self.update()
         if self.ros and self.rost:
-            painter.setPen(Qt.red)
+            painter.setPen(Qt.blue)
             painter.drawLine(*self.point, *self.curr_pos)
             self.update()
-        for i in self.lines:
-            painter.setPen(Qt.red)
-            painter.drawLine(round(i[0][0]), round(i[0][1]), round(i[1][0]), round(i[1][1]))
         if self.to_show:
             for i in self.true_lines:
-                painter.setPen(Qt.blue)
+                painter.setPen(Qt.green)
                 painter.drawLine(round(i[0][0]), round(i[0][1]), round(i[1][0]), round(i[1][1]))
                 self.update()
+        else:
+            for i in self.lines:
+                if self.show_bugs_bool:
+                    if i not in self.uncorrect_lines:
+                        painter.setPen(Qt.blue)
+                    else:
+                        painter.setPen(Qt.red)
+                else:
+                    painter.setPen(Qt.blue)
+                painter.drawLine(round(i[0][0]), round(i[0][1]), round(i[1][0]), round(i[1][1]))
+            if self.show_bugs_bool:
+                for i in self.uncorrect_true_lines:
+                    painter.setPen(Qt.green)
+                    painter.drawLine(round(i[0][0]), round(i[0][1]), round(i[1][0]), round(i[1][1]))
 
     def start(self):
         self.rasm = True
@@ -765,22 +790,27 @@ class ConstellationDialog(QMainWindow):
     def checker(self):
         f = lambda x, y: ((x[0] - y[0]) ** 2 + (x[1] - y[1]) ** 2) ** 0.5 <= self.stric
         k = 0
-        for i in self.lines:
-            found = []
-            for j in self.true_lines:
+        self.uncorrect_true_lines = []
+        correct_lines = []
+        for i in self.true_lines:
+            found = False
+            for j in self.lines:
                 if f(j[0], i[0]) == f(j[1], i[1]) == True:
                     found = True
                     k += 1
+                    correct_lines.append(j)
                     break
                 elif f(j[1], i[0]) == f(j[0], i[1]) == True:
                     found = True
                     k += 1
+                    correct_lines.append(j)
                     break
             if not found:
-                QMessageBox.information(None, "Результат", "Неверно", defaultButton=QMessageBox.Close)
-                return
-        if k != len(self.true_lines):
+                self.uncorrect_true_lines.append(i)
+        self.uncorrect_lines = list(set(self.lines) - set(correct_lines))
+        if k != len(self.lines) or len(self.uncorrect_true_lines) != 0:
             QMessageBox.information(None, "Результат", "Неверно", defaultButton=QMessageBox.Close)
+            self.step.setEnabled(True)
         else:
             QMessageBox.information(None, "Результат", "Верно", defaultButton=QMessageBox.Close)
 

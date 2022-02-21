@@ -24,7 +24,6 @@ from math import acos, sin
 import tkinter as tk
 
 root = tk.Tk()
-from ctypes import *
 
 
 new = ''
@@ -76,51 +75,52 @@ class Example(QMainWindow):
         fileMenu1.addAction(sys_size)
 
         self.button_cons_lines = QPushButton("Линии созвездий", self)
-        self.button_cons_lines.setFont(QFont('SansSerif', 20))
         self.button_cons_lines.resize(400, 50)
         self.button_cons_lines.move(450, self.y + 10)
 
         self.button_cons_names = QPushButton("Названия созвездий", self)
-        self.button_cons_names.setFont(QFont('SansSerif', 20))
         self.button_cons_names.resize(400, 50)
         self.button_cons_names.move(450, self.y + 10)
 
         self.button_stars_names = QPushButton("Названия звезд", self)
-        self.button_stars_names.setFont(QFont('SansSerif', 20))
         self.button_stars_names.resize(400, 50)
         self.button_stars_names.move(450, self.y + 10)
 
         self.button_dss_messier = QPushButton("Объекты Мессье", self)
-        self.button_dss_messier.setFont(QFont('SansSerif', 20))
         self.button_dss_messier.resize(400, 50)
         self.button_dss_messier.move(450, self.y + 10)
 
         self.button_dss_caldwell = QPushButton("Объекты Колдуэлла", self)
-        self.button_dss_caldwell.setFont(QFont('SansSerif', 20))
         self.button_dss_caldwell.resize(400, 50)
         self.button_dss_caldwell.move(450, self.y + 10)
 
         self.button_solar_bodies = QPushButton("Объекты СС", self)
-        self.button_solar_bodies.setFont(QFont('SansSerif', 20))
         self.button_solar_bodies.resize(400, 50)
         self.button_solar_bodies.move(450, self.y + 10)
 
         self.button_meteor_showers = QPushButton("Метеорные потоки", self)
-        self.button_meteor_showers.setFont(QFont('SansSerif', 20))
         self.button_meteor_showers.resize(400, 50)
         self.button_meteor_showers.move(450, self.y + 10)
 
         self.button_sphere_notes = QPushButton("Обозначения небесной сферы", self)
-        self.button_sphere_notes.setFont(QFont('SansSerif', 20))
         self.button_sphere_notes.resize(400, 50)
         self.button_sphere_notes.move(450, self.y + 10)
 
         self.button_dss_messier.clicked.connect(self.open_messier)
         self.button_cons_lines.clicked.connect(self.open_constellations)
         self.button_cons_names.clicked.connect(self.ans)
-
-
+        self.set_size()
         self.show()
+
+    def set_size(self):
+        self.button_cons_lines.setFont(QFont('SansSerif', int(25 / screen_increase)))
+        self.button_cons_names.setFont(QFont('SansSerif', int(25 / screen_increase)))
+        self.button_stars_names.setFont(QFont('SansSerif', int(25 / screen_increase)))
+        self.button_dss_messier.setFont(QFont('SansSerif', int(25 / screen_increase)))
+        self.button_dss_caldwell.setFont(QFont('SansSerif', int(25 / screen_increase)))
+        self.button_solar_bodies.setFont(QFont('SansSerif', int(25 / screen_increase)))
+        self.button_meteor_showers.setFont(QFont('SansSerif', int(25 / screen_increase)))
+        self.button_sphere_notes.setFont(QFont('SansSerif', int(25 / screen_increase)))
 
     def paintEvent(self, e):
         qp = QPainter()
@@ -201,6 +201,8 @@ class Example(QMainWindow):
                                               150, 100, 175, 25)
         if okBtnPressed:
             screen_increase = i / 100
+            self.set_size()
+            self.update()
 
     def keyPressEvent(self, e):
         if e.key() == 16777220 or e.key() == Qt.Key_Enter:

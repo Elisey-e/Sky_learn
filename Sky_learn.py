@@ -253,7 +253,7 @@ class Example(QMainWindow):
             dial = dialog
         elif i == 'open messier':
             point_type = 'messier'
-            dialog = MessierDialog(self)
+            dialog = Points_Dialog(self)
             dial = dialog
         if i == 'new point':
             dialog = PointsEditor(self)
@@ -272,9 +272,9 @@ class Example(QMainWindow):
         opened = Guess_Cons(self)
 
 
-class MessierDialog(QMainWindow):
+class Points_Dialog(QMainWindow):
     def __init__(self, parent=None):
-        super(MessierDialog, self).__init__(parent)
+        super(Points_Dialog, self).__init__(parent)
 
         reverse_color = QAction('&Цвет', self)
         reverse_color.setShortcut('Ctrl+R')

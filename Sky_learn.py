@@ -13,7 +13,7 @@ from PyQt5.QtCore import QObject, pyqtSignal, QSize, Qt, QUrl, QRect
 from time import localtime, timezone, sleep
 import webbrowser
 from PyQt5.QtGui import QPainter, QPen, QBrush, QLinearGradient, QPixmap, QIcon, QFont, QColor
-from PyQt5.QtCore import Qt, QRect
+from PyQt5.QtCore import Qt, QRect, QEvent, QPoint, QObject, pyqtSignal
 from time import sleep
 from shutil import copy
 from time import time
@@ -40,6 +40,25 @@ qq = []
 searcher_global = False
 screen_increase = 1.25
 point_type = ''
+
+
+class MouseTracker(QObject):
+    positionChanged = pyqtSignal(QPoint)
+
+    def __init__(self, widget):
+        super().__init__(widget)
+        self._widget = widget
+        self.widget.setMouseTracking(True)
+        self.widget.installEventFilter(self)
+
+    @property
+    def widget(self):
+        return self._widget
+
+    def eventFilter(self, o, e):
+        if o is self.widget and e.type() == QEvent.MouseMove:
+            self.positionChanged.emit(e.pos())
+        return super().eventFilter(o, e)
 
 
 class Example(QMainWindow):
@@ -235,7 +254,7 @@ class Example(QMainWindow):
         i, okBtnPressed = QInputDialog.getItem(self, "Выбрать редактор",
                                                "Выберите редактор\n",
                                                ('Созвездия', 'Точечные объекты', 'Маска звезд'),
-                                               0, False)
+                                               2, False)
         if okBtnPressed:
             if i == 'Созвездия':
                 self.set_clock_window('new chart')
@@ -286,25 +305,131 @@ class MaskEditor(QMainWindow):
         exitAction.setStatusTip('Закрыть всё')
         exitAction.triggered.connect(qApp.quit)
 
+        ch_conditions = QAction('&Отождествление', self)
+        ch_conditions.setStatusTip('Изменить параметры отождествления звезд')
+        ch_conditions.triggered.connect(self.changer)
+
         self.statusBar()
         menubar = self.menuBar()
         fileMenu1 = menubar.addMenu('&Файл')
         fileMenu1.addAction(exitAction)
+        fileMenu2 = menubar.addMenu('&Процессинг')
+        fileMenu2.addAction(ch_conditions)
 
         self.win_x, self.win_y = root.winfo_screenwidth(), root.winfo_screenheight()
         self.setGeometry(0, 0, self.win_x, self.win_y)
         self.setWindowIcon(QIcon('title.jpg'))
-        self.setWindowTitle('Редактор точечных объектов')
-        self.mode = 'messier'
+        self.setWindowTitle('Генератор маски звезд')
+
+        self.check = QPushButton("Выбрать директорию", self)
+        self.check.resize(200, 50)
+        self.check.move(10, 110)
+        self.check.clicked.connect(self.create_folder)
+
+        self.savee = QPushButton("Сохранить маску и завершить", self)
+        self.savee.resize(200, 50)
+        self.savee.move(10, 180)
+        self.savee.clicked.connect(self.saver)
+
         self.pic = False
-        self.paint = False
-        self.draw = False
-        self.rasm = False
-        self.show_made = False
-        self.delta = (400, 50)
-        self.type_data = []
+        self.delta = (300, 50)
+        self.star_sp = []
+        self.brightness = 64
+        self.area = 1
+        self.graph_sp = []
 
         self.show()
+
+    def changer(self):
+        i, ok = QInputDialog.getInt(self, "Яркость",
+                                    "Введите яркость звезды",
+                                    64, 0, 255, 1)
+        if ok:
+            self.brightness = i
+            i, ok = QInputDialog.getInt(self, "Размер",
+                                        "Введите площадь звезды в пикселях",
+                                        1, 0, 100, 1)
+            if ok:
+                self.area = i
+                self.gen_coords()
+                self.update()
+
+    def saver(self):
+        f1 = open(self.dir + '/star_mask.txt', 'w')
+        for i in self.star_sp:
+            x, y = i[0], i[1]
+            f1.write(' '.join([str(x), str(y)]) + '\n')
+        f1.write('!')
+        f1.close()
+        self.close()
+
+    def keyPressEvent(self, e):
+        if e.key() == 16777220 or e.key() == Qt.Key_Enter:
+            self.create_folder()
+
+    def paintEvent(self, e):
+        painter = QPainter(self)
+        if self.pic:
+            painter.drawPixmap(QRect(*self.delta, *self.im_size), self.pixmap)
+            for i in self.star_sp:
+                painter.setPen(QPen(Qt.green, 2))
+                painter.drawPoint(self.delta[0] + 1 + int(i[0] / self.real_size[0] * self.im_size[0]),
+                                    self.delta[1] + 1 + int(i[1] / self.real_size[1] * self.im_size[1]))
+
+    def create_folder(self):
+        dir = dirname(abspath(__file__))
+        i, ok = QInputDialog.getText(self, '', 'Введите название скайчарта')
+        if ok:
+            dir += '/Skycharts/constellations/' + i
+            self.dir = dir
+            self.check.setEnabled(False)
+            self.photo_path = self.dir + '/photo.png'
+            self.pixmap = QPixmap(self.photo_path)
+            im = Image.open(self.photo_path)
+            self.real_size = im.size
+            ma = max(self.real_size)
+            self.im_size = tuple(map(lambda x: int(x / ma * self.win_x * screen_increase / 2), self.real_size))
+            self.pic = True
+            self.gen_coords()
+
+    def gen_coords(self):
+        im = Image.open(self.photo_path)
+        pixels = im.load()
+        x, y = im.size
+        self.star_pix = [[False for i in range(x)] for j in range(y)]
+        self.truth = []
+        self.star = []
+        for i in range(x):
+            for j in range(y):
+                c = sum(pixels[i, j]) // 3
+                if c > self.brightness:
+                    self.star_pix[j][i] = True
+                    self.truth.append((i, j))
+        while self.truth:
+            self.star = []
+            self.rec(*self.truth[0])
+            su_x, su_y = 0, 0
+            for i in self.star:
+                su_x += i[0]
+                su_y += i[1]
+            su_x = round(su_x / len(self.star), 2)
+            su_y = round(su_y / len(self.star), 2)
+            if len(self.star) > self.area:
+                self.star_sp.append((su_x, su_y))
+
+    def rec(self, i, j):
+        if 0 <= i < self.real_size[0] and 0 <= j < self.real_size[1] and self.star_pix[j][i]:
+            self.star_pix[j][i] = False
+            self.truth.remove((i, j))
+            self.star.append((i, j))
+            self.rec(i + 1, j)
+            self.rec(i, j + 1)
+            self.rec(i + 1, j + 1)
+            self.rec(i - 1, j + 1)
+            self.rec(i + 1, j - 1)
+            self.rec(i, j - 1)
+            self.rec(i - 1, j)
+            self.rec(i - 1, j - 1)
 
 
 class Points_Dialog(QMainWindow):
@@ -623,6 +748,17 @@ class ConstellationDialog(QMainWindow):
         self.k = 1
         self.fps = 40
 
+        self.lbl_track = QLabel("", self)
+        self.lbl_track.resize(int(self.win_x*screen_increase) - 10, int(self.win_y*screen_increase) - 75 * screen_increase)
+        self.lbl_track.move(0, 0)
+
+        tracker = MouseTracker(self.lbl_track)
+        tracker.positionChanged.connect(self.on_positionChanged)
+
+        self.label_position = QLabel(
+            self.lbl_track, alignment=Qt.AlignCenter
+        )
+
         self.wait = QLabel("", self)
         self.wait.resize(200, 30)
         self.wait.move(10, 60)
@@ -658,13 +794,25 @@ class ConstellationDialog(QMainWindow):
         self.rost = False
         self.show_bugs_bool = False
         self.stric = 5
+        self.clone_curr_pos = (-30, -30)
         self.checked_lines = False
+        self.nearest = ()
         self.loader()
         self.show()
+
+    def start(self):
+        self.rasm = True
+        self.bal = time()
 
     def show_bugs(self):
         self.show_bugs_bool = not self.show_bugs_bool
         self.update()
+
+    def show_ans(self):
+        if self.to_show == False:
+            self.to_show = True
+        else:
+            self.to_show = False
 
     def ch_size(self):
         i, okBtnPressed = QInputDialog.getInt(self, "Размер",
@@ -727,10 +875,10 @@ class ConstellationDialog(QMainWindow):
             self.update()
 
     def mouseReleaseEvent(self, e):
-        if self.point != self.curr_pos and self.curr_pos is not None and self.ros and self.rost and self.rasm:
-            if self.im_pos[0] <= self.curr_pos[0] <= self.im_size[0] + self.im_pos[0] \
-                    and self.im_pos[1] <= self.curr_pos[1] <= self.im_size[1] + self.im_pos[1]:
-                self.lines.append((self.point, self.curr_pos))
+        if self.point != self.nearest and self.nearest is not None and self.ros and self.rost and self.rasm:
+            if self.im_pos[0] <= self.nearest[0] <= self.im_size[0] + self.im_pos[0] \
+                    and self.im_pos[1] <= self.nearest[1] <= self.im_size[1] + self.im_pos[1]:
+                self.lines.append((self.point, self.nearest))
                 self.deleted.clear()
                 self.rost = False
                 self.ros = False
@@ -771,7 +919,7 @@ class ConstellationDialog(QMainWindow):
     def mousePressEvent(self, e):
         self.step.setEnabled(False)
         self.show_bugs_bool = False
-        point = e.pos().x(), e.pos().y()
+        point = self.nearest
         self.point = point
         if self.rasm:
             if self.im_pos[0] <= point[0] <= self.im_size[0] + self.im_pos[0]\
@@ -785,17 +933,52 @@ class ConstellationDialog(QMainWindow):
             self.curr_pos = e.pos().x(), e.pos().y()
             self.rost = True
 
+    def on_positionChanged(self, pos):
+        self.clone_curr_pos = pos.x(), pos.y()
+        self.nearest_star_pos()
+        self.update()
+
+    def nearest_star_pos(self):
+        i_0 = -1
+        j_0 = -1
+        for i in range(len(self.star_mask_x)):
+            if self.star_mask_x[i][0] < self.clone_curr_pos[0]:
+                i_0 = i
+        for j in range(len(self.star_mask_y)):
+            if self.star_mask_y[i][1] < self.clone_curr_pos[1]:
+                j_0 = j
+        delta = int((self.im_size[0] * self.im_size[1]) ** 0.5 / 20)
+        pret_x = []
+        pret_y = []
+        for i in range(len(self.star_mask_x)):
+            if self.clone_curr_pos[0] - delta <= self.star_mask_x[i][0] <= self.clone_curr_pos[0] + delta:
+                pret_x.append(self.star_mask_x[i])
+        for j in range(len(self.star_mask_y)):
+            if self.clone_curr_pos[1] - delta <= self.star_mask_y[j][1] <= self.clone_curr_pos[1] + delta:
+                pret_y.append(self.star_mask_y[j])
+        pret = list(set(pret_x) & set(pret_y))
+        self.nearest = ()
+        mi = 100000 ** 2
+        for i in pret:
+            if (self.clone_curr_pos[0] - i[0]) ** 2 + (self.clone_curr_pos[1] - i[1]) ** 2 < mi:
+                mi = (self.clone_curr_pos[0] - i[0]) ** 2 + (self.clone_curr_pos[1] - i[1]) ** 2
+                self.nearest = i
+        self.update()
+
     def paintEvent(self, e):
         sleep(1 / self.fps)
         painter = QPainter(self)
         painter.drawPixmap(QRect(*self.im_pos, *self.im_size), self.pixmap)
+        if self.nearest != () and self.im_pos[0] < self.clone_curr_pos[0] < self.im_pos[0] + self.im_size[0] and\
+                self.im_pos[1] < self.clone_curr_pos[1] < self.im_pos[1] + self.im_size[1]:
+            painter.setPen(QPen(Qt.green, 1))
+            painter.drawEllipse(self.nearest[0] - 5, self.nearest[1] - 5, 10, 10)
         if self.rasm:
             st = time() - self.bal
             h = str(int((st // 3600) % 24)).rjust(2, '0')
             m = str(int((st // 60) % 60)).rjust(2, '0')
             s = str(st % 60)
             self.timer.setText(h + ':' + m + ':' + s[:s.find('.') + 3].rjust(5, '0'))
-            self.update()
         if self.ros and self.rost:
             painter.setPen(Qt.blue)
             painter.drawLine(*self.point, *self.curr_pos)
@@ -819,10 +1002,6 @@ class ConstellationDialog(QMainWindow):
                 for i in self.uncorrect_true_lines:
                     painter.setPen(Qt.green)
                     painter.drawLine(round(i[0][0]), round(i[0][1]), round(i[1][0]), round(i[1][1]))
-
-    def start(self):
-        self.rasm = True
-        self.bal = time()
 
     def checker(self):
         f = lambda x, y: ((x[0] - y[0]) ** 2 + (x[1] - y[1]) ** 2) ** 0.5 <= self.stric
@@ -855,23 +1034,26 @@ class ConstellationDialog(QMainWindow):
         path = dirname(abspath(__file__)) + '/Skycharts/constellations/' + UT + '/star_data.txt'
         f1 = open(path, 'r')
         sp = f1.read().split('\n')
+        f2 = open(dirname(abspath(__file__)) + '/Skycharts/constellations/' + UT + '/star_mask.txt', 'r')
+        star_sp = f2.read().split('\n')
         self.true_lines = []
+        self.star_mask_x = []
+        k = self.im_size[0] / self.real_size[0]
         for i in sp:
             if i == '!':
                 break
             x1, y1, x2, y2 = map(float, i.split())
-            k = self.im_size[0] / self.real_size[0]
             self.true_lines.append(((x1 * k + self.im_pos[0], y1 * k + self.im_pos[1]),
                                     (x2 * k + self.im_pos[0], y2 * k + self.im_pos[1])))
+        for i in star_sp:
+            if i == '!':
+                break
+            x, y = map(float, i.split())
+            self.star_mask_x.append((x * k + self.im_pos[0], y * k + self.im_pos[1]))
+        self.star_mask_x.sort(key=lambda x: x[0])
+        self.star_mask_y = sorted(self.star_mask_x, key=lambda x: x[1])
         f1.close()
-
-    def show_ans(self):
-        if self.to_show == False:
-            self.to_show = True
-        else:
-            self.to_show = False
-
-
+        f2.close()
 
 
 class PointsEditor(QMainWindow):

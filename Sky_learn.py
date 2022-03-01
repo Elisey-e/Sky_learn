@@ -748,9 +748,11 @@ class ConstellationDialog(QMainWindow):
         self.k = 1
         self.fps = 40
 
+        self.lbl_track_y = 25
+
         self.lbl_track = QLabel("", self)
-        self.lbl_track.resize(int(self.win_x*screen_increase) - 10, int(self.win_y*screen_increase) - 75 * screen_increase)
-        self.lbl_track.move(0, 0)
+        self.lbl_track.resize(int(self.win_x*screen_increase), int(self.win_y*screen_increase))
+        self.lbl_track.move(0, 25)
 
         tracker = MouseTracker(self.lbl_track)
         tracker.positionChanged.connect(self.on_positionChanged)
@@ -875,7 +877,7 @@ class ConstellationDialog(QMainWindow):
             self.update()
 
     def mouseReleaseEvent(self, e):
-        if self.point != self.nearest and self.nearest is not None and self.ros and self.rost and self.rasm:
+        if self.point != self.nearest and self.nearest != () and self.ros and self.rost and self.rasm:
             if self.im_pos[0] <= self.nearest[0] <= self.im_size[0] + self.im_pos[0] \
                     and self.im_pos[1] <= self.nearest[1] <= self.im_size[1] + self.im_pos[1]:
                 self.lines.append((self.point, self.nearest))
@@ -922,7 +924,7 @@ class ConstellationDialog(QMainWindow):
         point = self.nearest
         self.point = point
         if self.rasm:
-            if self.im_pos[0] <= point[0] <= self.im_size[0] + self.im_pos[0]\
+            if point != () and self.im_pos[0] <= point[0] <= self.im_size[0] + self.im_pos[0]\
                     and self.im_pos[1] <= point[1] <= self.im_size[1] + self.im_pos[1]:
                 self.ros = True
                 self.paint = True
@@ -934,7 +936,7 @@ class ConstellationDialog(QMainWindow):
             self.rost = True
 
     def on_positionChanged(self, pos):
-        self.clone_curr_pos = pos.x(), pos.y()
+        self.clone_curr_pos = pos.x(), pos.y() + self.lbl_track_y
         self.nearest_star_pos()
         self.update()
 

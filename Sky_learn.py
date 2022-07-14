@@ -687,7 +687,6 @@ class Points_Dialog(QMainWindow):
         if (e.key() == Qt.Key_E) and self.to_edit:
             pass
 
-
 class ConstellationDialog(QMainWindow):
     def __init__(self, parent=None):
         super(ConstellationDialog, self).__init__(parent)

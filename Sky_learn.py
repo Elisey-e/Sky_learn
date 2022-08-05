@@ -2041,7 +2041,7 @@ class Information_Dialog(QMainWindow):
         self.t8.resize(400, 25)
         self.t8.setStyleSheet("color: rgb(0, 0, 255);")
 
-        self.q = ['Важно понимать, что редактор как таковой боооольшой костыль. Окда. Пизда.']
+        self.q = ['Важно понимать, что редактор как таковой боооольшой костыль.']
 
         self.tx7 = QLabel('\n'.join(self.q), self)
         self.tx7.setFont(QFont('SansSerif', 12 / screen_increase))
